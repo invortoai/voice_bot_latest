@@ -1,0 +1,272 @@
+name: CI / CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION:       ap-south-1
+  ECR_RUNNER_REPO:  957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-runner
+  ECR_WORKER_REPO:  957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CI — runs on every push and PR
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  ci:
+    name: Lint · Test · Type Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB:       invorto_test
+          POSTGRES_USER:     postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet ruff bandit pip-audit mypy types-requests
+          pip install --quiet -r requirements.runner.txt -r requirements-test.txt
+
+      - name: Lint & Format (ruff)
+        run: |
+          ruff format --check .
+          ruff check .
+
+      - name: Security Scan (bandit)
+        run: bandit -r app/ -ll -s B608
+
+      - name: Dependency Audit (pip-audit)
+        run: pip-audit -r requirements.runner.txt
+
+      - name: Unit Tests
+        run: |
+          pytest tests/unit/ \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=10 \
+            -v
+
+      - name: Type Check (mypy)
+        run: mypy app/ --ignore-missing-imports --no-strict-optional --exclude=app/worker/
+
+      - name: Integration Tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/invorto_test
+        run: |
+          pytest tests/integration/ \
+            --cov=app \
+            --cov-report=xml \
+            --cov-fail-under=30 \
+            -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CD — only on push to main, only after CI passes
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Build · Push · Deploy
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── AWS auth via OIDC (no stored AWS keys) ──────────────────────────────
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Build ARM64 images (EC2 Graviton) ──────────────────────────────────
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push runner image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.runner
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.ECR_RUNNER_REPO }}:latest
+            ${{ env.ECR_RUNNER_REPO }}:${{ github.sha }}
+          cache-from: type=gha,scope=runner
+          cache-to:   type=gha,scope=runner,mode=max
+
+      - name: Build & push worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.worker
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.ECR_WORKER_REPO }}:latest
+            ${{ env.ECR_WORKER_REPO }}:${{ github.sha }}
+          cache-from: type=gha,scope=worker
+          cache-to:   type=gha,scope=worker,mode=max
+
+      # ── Temporarily open SSH from this runner's IP ─────────────────────────
+      - name: Get GitHub Actions runner IP
+        id: runner_ip
+        run: echo "ip=$(curl -s https://api.ipify.org)" >> $GITHUB_OUTPUT
+
+      - name: Open SSH on runner security group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.RUNNER_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.runner_ip.outputs.ip }}/32 \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Open SSH on worker security group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.WORKER_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.runner_ip.outputs.ip }}/32 \
+            --region ${{ env.AWS_REGION }}
+
+      # ── Deploy runner ───────────────────────────────────────────────────────
+      - name: Deploy → runner EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.RUNNER_IP }}
+          username: ec2-user
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            aws ecr get-login-password --region ap-south-1 \
+              | docker login --username AWS --password-stdin \
+                957500070832.dkr.ecr.ap-south-1.amazonaws.com
+            docker pull 957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-runner:latest
+            aws ssm get-parameter \
+              --name "/invorto-ai/runner.env" \
+              --with-decryption \
+              --region ap-south-1 \
+              --query Parameter.Value \
+              --output text > /home/ec2-user/runner.env
+            docker rm -f invorto-runner || true
+            docker run -d \
+              --name invorto-runner \
+              --restart unless-stopped \
+              --env-file /home/ec2-user/runner.env \
+              -p 7860:7860 \
+              957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-runner:latest
+            echo "Runner container started:"
+            docker ps | grep invorto-runner
+
+      # ── Deploy workers ──────────────────────────────────────────────────────
+      - name: Deploy → worker-1 EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.WORKER_1_IP }}
+          username: ec2-user
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            aws ecr get-login-password --region ap-south-1 \
+              | docker login --username AWS --password-stdin \
+                957500070832.dkr.ecr.ap-south-1.amazonaws.com
+            docker pull 957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
+            aws ssm get-parameter \
+              --name "/invorto-ai/worker.env" \
+              --with-decryption \
+              --region ap-south-1 \
+              --query Parameter.Value \
+              --output text > /home/ec2-user/worker.env
+            docker rm -f invorto-worker || true
+            docker run -d \
+              --name invorto-worker \
+              --restart unless-stopped \
+              --env-file /home/ec2-user/worker.env \
+              -p 8765:8765 \
+              957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
+            echo "Worker container started:"
+            docker ps | grep invorto-worker
+
+      - name: Deploy → worker-2 EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.WORKER_2_IP }}
+          username: ec2-user
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            aws ecr get-login-password --region ap-south-1 \
+              | docker login --username AWS --password-stdin \
+                957500070832.dkr.ecr.ap-south-1.amazonaws.com
+            docker pull 957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
+            aws ssm get-parameter \
+              --name "/invorto-ai/worker.env" \
+              --with-decryption \
+              --region ap-south-1 \
+              --query Parameter.Value \
+              --output text > /home/ec2-user/worker.env
+            docker rm -f invorto-worker || true
+            docker run -d \
+              --name invorto-worker \
+              --restart unless-stopped \
+              --env-file /home/ec2-user/worker.env \
+              -p 8765:8765 \
+              957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
+            echo "Worker container started:"
+            docker ps | grep invorto-worker
+
+      # ── Always close SSH (even if deploy failed) ───────────────────────────
+      - name: Close SSH on runner security group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.RUNNER_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.runner_ip.outputs.ip }}/32 \
+            --region ${{ env.AWS_REGION }} || true
+
+      - name: Close SSH on worker security group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.WORKER_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.runner_ip.outputs.ip }}/32 \
+            --region ${{ env.AWS_REGION }} || true
