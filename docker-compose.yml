@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    environment:
+      - PORT=7860
+      - ENVIRONMENT=local
+      - WORKER_POOL_TYPE=local
+      - WORKER_HOSTS=worker:8765
+      - WORKER_PORT=8765
+    depends_on:
+      - worker
+    networks:
+      - invorto-network
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    ports:
+      - "8765:8765"
+    env_file:
+      - .env
+    environment:
+      - WORKER_PORT=8765
+    networks:
+      - invorto-network
+    restart: unless-stopped
+
+networks:
+  invorto-network:
+    driver: bridge

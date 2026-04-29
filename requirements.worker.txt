@@ -1,0 +1,42 @@
+# =============================================================================
+# Invorto AI - Worker Dependencies (voice pipeline, port 8765)
+# =============================================================================
+
+# Core Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+
+# AI Voice Pipeline (Pipecat) - tracing extra for OpenTelemetry/Langfuse
+pipecat-ai[silero,openai,deepgram,elevenlabs,websocket,local-smart-turn-v3,tracing]==0.0.99
+# OpenTelemetry (tracing + default metrics via OTLP; exporter also used by Langfuse/Pipecat)
+opentelemetry-sdk>=1.28.0
+opentelemetry-exporter-otlp-proto-http>=1.28.0
+opentelemetry-instrumentation-fastapi>=0.49b0
+opentelemetry-instrumentation-httpx>=0.49b0
+
+# PyTorch (required for Silero VAD and Smart Turn v3) - standard PyPI wheels (supports amd64 + arm64)
+torch==2.10.0
+torchaudio==2.10.0
+
+# HTTP Client (audio URL fetching)
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# Audio Processing (for audio URL playback)
+pydub>=0.25.1
+
+# WebSocket support
+websockets>=12.0
+
+# Logging
+loguru>=0.7.2
+
+# AWS SDK
+boto3>=1.34.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Environment variables
+python-dotenv>=1.0.0

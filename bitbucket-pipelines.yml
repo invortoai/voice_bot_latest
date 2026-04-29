@@ -1,0 +1,164 @@
+image: python:3.11-slim
+
+definitions:
+  caches:
+    pip-runner: ~/.cache/pip
+
+  steps:
+    # ── 1. Lint & Format ──────────────────────────────────────────────────────
+    - step: &lint-format
+        name: "Lint & Format (ruff)"
+        caches:
+          - pip-runner
+        script:
+          - pip install --quiet ruff
+          - ruff format --check .
+          - ruff check .
+
+    # ── 2. Security Scan ──────────────────────────────────────────────────────
+    - step: &security-scan
+        name: "Security Scan (bandit)"
+        caches:
+          - pip-runner
+        script:
+          - pip install --quiet bandit
+          # -ll = medium severity and above only
+          # -s B608 = skip dynamic SQL check (all queries use parameterized %s placeholders)
+          - bandit -r app/ -ll -s B608
+
+    # ── 3. Dependency Audit ───────────────────────────────────────────────────
+    - step: &dep-audit
+        name: "Dependency Audit (pip-audit)"
+        caches:
+          - pip-runner
+        script:
+          - pip install --quiet pip-audit
+          # Runner deps only — worker deps skipped (torch/pipecat are ~2GB)
+          - pip-audit -r requirements.runner.txt
+
+    # ── 4. Unit Tests + Coverage ──────────────────────────────────────────────
+    - step: &unit-tests
+        name: "Unit Tests (coverage >= 10%)"
+        caches:
+          - pip-runner
+        script:
+          - pip install --quiet -r requirements.runner.txt -r requirements-test.txt
+          - pytest tests/unit/
+              --cov=app
+              --cov-report=xml
+              --cov-report=term-missing
+              --cov-fail-under=10
+              -v
+        artifacts:
+          - coverage.xml
+
+    # ── 5. Type Check ─────────────────────────────────────────────────────────
+    - step: &type-check
+        name: "Type Check (mypy)"
+        caches:
+          - pip-runner
+        script:
+          - pip install --quiet mypy types-requests
+          - pip install --quiet -r requirements.runner.txt
+          # app/worker/ excluded — pipecat has no type stubs
+          - mypy app/ --ignore-missing-imports --no-strict-optional --exclude=app/worker/
+
+    # ── 6. Integration Tests ──────────────────────────────────────────────────
+    - step: &integration-tests
+        name: "Integration Tests (coverage >= 30%)"
+        caches:
+          - pip-runner
+        services:
+          - postgres
+        script:
+          - pip install --quiet -r requirements.runner.txt -r requirements-test.txt
+          - pytest tests/integration/
+              --cov=app
+              --cov-report=xml
+              --cov-fail-under=30
+              -v
+        artifacts:
+          - coverage.xml
+
+    # ── 7. Teams Notification ─────────────────────────────────────────────────
+    - step: &notify-teams
+        name: "Notify Teams"
+        script:
+          - |
+            PIPELINE_URL="https://bitbucket.org/${BITBUCKET_WORKSPACE}/${BITBUCKET_REPO_SLUG}/pipelines/results/${BITBUCKET_BUILD_NUMBER}"
+            curl -s -X POST "https://myleadsquared.webhook.office.com/webhookb2/af7f39e6-a176-4d1d-83f4-9ce2ae750f92@3963c762-b794-4c96-9050-f47d9da97638/IncomingWebhook/ec83b8cb93824d0bb312719f24a85e7d/9ea384f8-b8ea-415c-a5bb-350f4f2a088e/V2WdGeVtT-_-49QOMTJs49lo1lVcEDCdW5CAcIiKfC4JQ1" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"@type\": \"MessageCard\",
+                \"@context\": \"http://schema.org/extensions\",
+                \"themeColor\": \"0076D7\",
+                \"summary\": \"Pipeline result for ${BITBUCKET_BRANCH}\",
+                \"sections\": [{
+                  \"activityTitle\": \"Pipeline Passed on \`${BITBUCKET_REPO_SLUG}\`\",
+                  \"activitySubtitle\": \"Branch: \`${BITBUCKET_BRANCH}\` | Commit: \`${BITBUCKET_COMMIT:0:7}\`\",
+                  \"facts\": [
+                    { \"name\": \"Branch\",  \"value\": \"${BITBUCKET_BRANCH}\" },
+                    { \"name\": \"Build\",   \"value\": \"#${BITBUCKET_BUILD_NUMBER}\" },
+                    { \"name\": \"Commit\",  \"value\": \"${BITBUCKET_COMMIT:0:7}\" }
+                  ],
+                  \"markdown\": true
+                }],
+                \"potentialAction\": [{
+                  \"@type\": \"OpenUri\",
+                  \"name\": \"View Pipeline\",
+                  \"targets\": [{ \"os\": \"default\", \"uri\": \"${PIPELINE_URL}\" }]
+                }]
+              }"
+
+    # ─── BUILD VALIDATION (commented out — worker deps are ~2GB due to torch) ─
+    # - step: &build-validate
+    #     name: "Build Validation"
+    #     script:
+    #       - pip install -r requirements.runner.txt
+    #       - python -m compileall app/
+    #       # Worker skipped: torch + torchaudio + pipecat with all extras = ~2GB
+    #       # - pip install -r requirements.worker.txt
+    # ─────────────────────────────────────────────────────────────────────────
+
+  services:
+    postgres:
+      image: postgres:15
+      environment:
+        POSTGRES_DB:       invorto_test
+        POSTGRES_USER:     postgres
+        POSTGRES_PASSWORD: postgres
+
+# ── Pipeline triggers ─────────────────────────────────────────────────────────
+
+pipelines:
+  # Every push to any branch: fast checks only
+  default:
+    - parallel:
+        - step: *lint-format
+        - step: *security-scan
+        - step: *dep-audit
+    - step: *unit-tests
+    - step: *type-check
+
+  # Pull requests: full suite (no Teams notify)
+  pull-requests:
+    "**":
+      - parallel:
+          - step: *lint-format
+          - step: *security-scan
+          - step: *dep-audit
+      - step: *unit-tests
+      - step: *type-check
+      - step: *integration-tests
+
+  # Main branch: full suite + Teams notification
+  branches:
+    main:
+      - parallel:
+          - step: *lint-format
+          - step: *security-scan
+          - step: *dep-audit
+      - step: *unit-tests
+      - step: *type-check
+      - step: *integration-tests
+      - step: *notify-teams

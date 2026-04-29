@@ -1,0 +1,46 @@
+# =============================================================================
+# Invorto AI - Runner Dependencies (FastAPI service, port 7860)
+# =============================================================================
+
+# Core Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+python-multipart>=0.0.9
+
+# Twilio SDK (TwiML generation)
+twilio>=9.0.0
+
+# HTTP Client (worker health checks)
+httpx>=0.26.0
+requests>=2.31.0
+
+# Logging
+loguru>=0.7.2
+
+# AWS SDK (EC2 worker discovery)
+boto3>=1.34.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Database
+psycopg2-binary>=2.9.9
+
+# Authentication
+PyJWT>=2.8.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# OpenTelemetry (tracing + default metrics via OTLP)
+opentelemetry-sdk>=1.28.0
+opentelemetry-exporter-otlp-proto-http>=1.28.0
+opentelemetry-instrumentation-fastapi>=0.49b0
+opentelemetry-instrumentation-httpx>=0.49b0
+
+# Redis — shared worker assignment state for multi-runner EKS deployments (optional).
+redis[asyncio]>=5.0.0
+
+# Kubernetes client — required when WORKER_POOL_TYPE=k8s.
+kubernetes-asyncio>=24.2.0

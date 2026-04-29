@@ -1,0 +1,247 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+.env.*.local
+*.env
+*.pem
+*.key
+*.crt
+*.csr
+secrets/
+credentials/
+config.local.*
+
+# IDEs & Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+.vimrc
+.vim/
+
+# Testing & Coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+nosetests.xml
+test-results/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Type Checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Logs
+*.log
+logs/
+*.log.*
+ngrok.log
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+ehthumbs.db
+Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate.d/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+*.tfplan.json
+*.tfvars
+*.tfvars.json
+!example.tfvars
+!example.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
+.terraform.lock.info
+
+# Terragrunt
+.terragrunt-cache/
+**/terragrunt-cache/
+.terragrunt-debug
+terragrunt-debug.tfvars.json
+
+# Terraform Cloud/Enterprise
+.tfc/
+.terraform.d/
+
+# Terraform Variables (sensitive)
+secrets.tfvars
+secret.tfvars
+local.tfvars
+dev.tfvars
+prod.tfvars
+staging.tfvars
+
+# Docker
+docker-compose.override.yml
+.dockerignore.local
+*.dockerignore.local
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+pgdata/
+postgres_data/
+*.dump
+*.sql.gz
+*.backup
+
+# Audio/Media Files (generated during testing)
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.aac
+*.m4a
+recordings/
+audio_cache/
+temp_audio/
+
+# Node (if any frontend tooling exists)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.yarn/
+
+# AWS & Cloud
+.aws/
+*.pem
+aws-exports.js
+amplify/
+.amplify/
+
+# Temporary & Cache Files
+tmp/
+temp/
+*.tmp
+*.temp
+*.cache
+.cache/
+*.pid
+*.seed
+*.pid.lock
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+*~
+
+# Local Development
+*.local
+local_settings.py
+ngrok.yml
+celerybeat-schedule
+celerybeat.pid
+
+# Session Files
+session_data/
+sessions/
+*.session
+
+# Test reports
+reports/
+.coverage
+
+# Judge eval run artifacts (per-run JSON dumps)
+judge_eval/results/*.json
+.claude/
