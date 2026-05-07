@@ -325,9 +325,11 @@ app.include_router(mcube_router)
 
 from app.routes.insights_config import router as insights_config_router
 from app.routes.insights_analyse import router as insights_analyse_router
+from app.routes.knowledge import router as knowledge_router
 
 app.include_router(insights_config_router)
 app.include_router(insights_analyse_router)
+app.include_router(knowledge_router)
 
 
 # Public health endpoint (no authentication - used by load balancers and monitoring)

@@ -53,6 +53,7 @@ SYSTEM_PARAM_KEYS = frozenset(
         "phone_number_id",
         "provider_credentials",
         "interruption_strategy",
+        "system_prompt_rag_context",
     }
 )
 
@@ -75,6 +76,9 @@ class AssistantConfig:
         self._load_from_assistant_config(assistant_config)
         self._load_from_phone_config(phone_config or {})
         logger.info(f"Config loaded from database for assistant: {self.assistant_id}")
+
+        # RAG context injected by runner at call start (optional)
+        self.rag_context: str = custom_params.get("system_prompt_rag_context", "")
 
         if user_custom_params is not None:
             self.extra_params = dict(user_custom_params)
@@ -194,6 +198,10 @@ class AssistantConfig:
                 message += f"\n\nThe caller's number is {safe_caller}."
 
         message += f'\n\nEnsure responses are clear, complete, and within the max token limit of {self.max_completion_tokens} tokens. Use natural spoken language. Avoid expressive punctuation like "!" or symbols that affect TTS modulation. Use only commas and full stops for natural pauses. Maintain a neutral tone without over-emphasis.'
+
+        # Append RAG knowledge base context if available
+        if self.rag_context:
+            message += f"\n\n{self.rag_context}"
 
         return message
 

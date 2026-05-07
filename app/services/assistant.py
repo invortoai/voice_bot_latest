@@ -28,6 +28,10 @@ def create(
     interruption_strategy: Optional[str] = None,
     insight_enabled: bool = False,
     insights_config_id: Optional[str] = None,
+    knowledge_base_id: Optional[str] = None,
+    rag_top_k: int = 5,
+    rag_score_threshold: float = 0.35,
+    rag_context_query: Optional[str] = None,
 ) -> dict:
     with get_cursor() as cur:
         cur.execute(
@@ -36,8 +40,9 @@ def create(
                 org_id, name, description, system_prompt, llm_provider, model, llm_settings,
                 voice_provider, voice_id, voice_model, voice_settings, greeting_message, end_call_phrases,
                 transcriber_provider, transcriber_model, transcriber_language, transcriber_settings,
-                vad_settings, interruption_strategy, insight_enabled, insights_config_id
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                vad_settings, interruption_strategy, insight_enabled, insights_config_id,
+                knowledge_base_id, rag_top_k, rag_score_threshold, rag_context_query
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
         """,
             (
@@ -62,6 +67,10 @@ def create(
                 interruption_strategy or "default",
                 insight_enabled,
                 insights_config_id,
+                knowledge_base_id,
+                rag_top_k,
+                rag_score_threshold,
+                rag_context_query,
             ),
         )
         return dict(cur.fetchone())

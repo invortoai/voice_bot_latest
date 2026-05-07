@@ -28,6 +28,7 @@ from app.models.schemas import (
     JambonzWebhookRequest,
 )
 from app.services import assistant_service, call_service, phone_number_service
+from app.services.knowledge_service import build_rag_context
 from app.services.worker_pool import worker_pool
 
 router = APIRouter(prefix="/jambonz", tags=["Jambonz Webhooks"])
@@ -361,6 +362,29 @@ async def jambonz_call(request: Request, payload: JambonzWebhookRequest):
 
         if assistant_id:
             metadata["assistant_id"] = assistant_id
+
+        # ── RAG: inject knowledge base context into system prompt ─────────────
+        # If the assistant has a knowledge_base_id and rag_context_query,
+        # fetch top-K relevant chunks and pass as system_prompt_rag_context.
+        # The worker will append this to the assistant's system prompt.
+        try:
+            _ac = assistant_service.get_by_id(assistant_id) if assistant_id else None
+            if _ac and _ac.get("knowledge_base_id") and _ac.get("rag_context_query"):
+                rag_context = await build_rag_context(
+                    kb_id=str(_ac["knowledge_base_id"]),
+                    query=_ac["rag_context_query"],
+                    top_k=int(_ac.get("rag_top_k") or 5),
+                    score_threshold=float(_ac.get("rag_score_threshold") or 0.35),
+                )
+                if rag_context:
+                    metadata["system_prompt_rag_context"] = rag_context
+                    logger.info(
+                        f"RAG context injected for assistant={assistant_id}, "
+                        f"kb={_ac['knowledge_base_id']}"
+                    )
+        except Exception as _rag_err:
+            # RAG failure must never block a call
+            logger.warning(f"RAG context fetch failed (non-fatal): {_rag_err}")
 
         # Default to 8k unless Jambonz explicitly provides a sample_rate.
         # 8k is the most universally compatible telephony rate; we can safely move
