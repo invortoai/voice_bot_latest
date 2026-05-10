@@ -1,12 +1,11 @@
 """Unit tests for BaseWorkerPool using fakeredis and mocked HTTP."""
+
 import asyncio
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import fakeredis.aioredis
 import pytest
-import pytest_asyncio
-import respx
 import httpx
 
 from app.services.worker_pool.base import BaseWorkerPool, WorkerStatus
@@ -33,7 +32,9 @@ def _make_pool(use_redis: bool = True) -> tuple[_TestPool, RedisStateBackend | N
     return pool, None
 
 
-def _add_worker(pool: _TestPool, worker_id: str, private_ip: str = "10.0.0.1") -> WorkerStatus:
+def _add_worker(
+    pool: _TestPool, worker_id: str, private_ip: str = "10.0.0.1"
+) -> WorkerStatus:
     w = WorkerStatus(
         host=f"{private_ip}:8765",
         instance_id=worker_id,
@@ -215,7 +216,9 @@ async def test_release_worker_rc8_race_resolves_via_retry():
     backend.get_worker_for_call = delayed_lookup
     # Write the real mapping
     await backend._redis.set("invorto:worker:call:call-real", "w1")
-    await backend._redis.hset("invorto:worker:state:w1", "current_call_sid", "call-real")
+    await backend._redis.hset(
+        "invorto:worker:state:w1", "current_call_sid", "call-real"
+    )
 
     with patch.object(pool, "_cancel_prewarm", AsyncMock()):
         with patch("asyncio.sleep", AsyncMock()):  # speed up test
@@ -351,9 +354,7 @@ async def test_health_check_increments_failures_on_error(respx_mock):
     pool, _ = _make_pool()
     w1 = _add_worker(pool, "w1")
 
-    respx_mock.get("http://10.0.0.1:8765/health").mock(
-        return_value=httpx.Response(500)
-    )
+    respx_mock.get("http://10.0.0.1:8765/health").mock(return_value=httpx.Response(500))
 
     await pool.health_check_worker(w1)
     assert w1.consecutive_failures == 1

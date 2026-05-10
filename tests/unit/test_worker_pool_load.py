@@ -41,8 +41,10 @@ class _FakeRedis:
     """In-process simulation of RedisStateBackend for load tests."""
 
     def __init__(self):
-        self._states: dict[str, dict] = {}  # worker_id → {current_call_sid, assigned_at}
-        self._calls: dict[str, str] = {}    # call_sid → worker_id
+        self._states: dict[
+            str, dict
+        ] = {}  # worker_id → {current_call_sid, assigned_at}
+        self._calls: dict[str, str] = {}  # call_sid → worker_id
         self._mu = asyncio.Lock()
 
     async def find_and_assign(self, worker_ids: list, call_sid: str, ttl: int):

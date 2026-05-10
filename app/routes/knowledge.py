@@ -16,12 +16,10 @@ Endpoints:
   POST   /knowledge-bases/{kb_id}/search           Test RAG search
 """
 
-import asyncio
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from loguru import logger
 
 from app.core.auth import require_api_key
 from app.services import knowledge_service
@@ -34,6 +32,7 @@ router = APIRouter(
 
 
 # ── Request / Response Models ─────────────────────────────────────────────────
+
 
 class CreateKnowledgeBaseRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -57,6 +56,7 @@ class SearchRequest(BaseModel):
 
 
 # ── Knowledge Base Endpoints ──────────────────────────────────────────────────
+
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_knowledge_base(request: Request, body: CreateKnowledgeBaseRequest):
@@ -95,6 +95,7 @@ async def delete_knowledge_base(kb_id: str, request: Request):
 
 
 # ── Document Endpoints ────────────────────────────────────────────────────────
+
 
 @router.post("/{kb_id}/documents", status_code=status.HTTP_201_CREATED)
 async def create_document(
@@ -140,9 +141,7 @@ async def list_documents(kb_id: str, request: Request):
     return knowledge_service.list_documents(kb_id, org_id=org_id)
 
 
-@router.delete(
-    "/{kb_id}/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/{kb_id}/documents/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(kb_id: str, doc_id: str, request: Request):
     org_id = request.headers.get("X-Org-Id")
     deleted = knowledge_service.delete_document(doc_id, org_id=org_id)
@@ -151,6 +150,7 @@ async def delete_document(kb_id: str, doc_id: str, request: Request):
 
 
 # ── Search (for testing) ──────────────────────────────────────────────────────
+
 
 @router.post("/{kb_id}/search")
 async def search_knowledge_base(kb_id: str, body: SearchRequest, request: Request):

@@ -1,4 +1,5 @@
 """Unit tests for RedisStateBackend using fakeredis."""
+
 import time
 
 import pytest
@@ -7,9 +8,6 @@ import fakeredis.aioredis
 
 from app.services.worker_pool.redis_state import (
     RedisStateBackend,
-    _LUA_FIND_AND_ASSIGN,
-    _LUA_RELEASE_ASSIGNMENT,
-    _LUA_REASSIGN,
 )
 
 
@@ -42,7 +40,9 @@ async def test_find_and_assign_claims_first_free(backend):
 @pytest.mark.asyncio
 async def test_find_and_assign_skips_busy_picks_next(backend):
     # Pre-assign w1
-    await backend._redis.hset("invorto:worker:state:w1", "current_call_sid", "existing-call")
+    await backend._redis.hset(
+        "invorto:worker:state:w1", "current_call_sid", "existing-call"
+    )
 
     worker_id = await backend.find_and_assign(["w1", "w2"], "call-2", ttl=100)
     assert worker_id == "w2"

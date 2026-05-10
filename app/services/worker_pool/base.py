@@ -324,7 +324,9 @@ class BaseWorkerPool(ABC):
 
                 await self._release_stale_assignments()
 
-                available = sum(1 for w in self.workers.values() if w.is_accepting_calls)
+                available = sum(
+                    1 for w in self.workers.values() if w.is_accepting_calls
+                )
                 logger.debug(
                     f"Health check: {available}/{len(self.workers)} workers available"
                 )
@@ -360,7 +362,9 @@ class BaseWorkerPool(ABC):
             try:
                 states = await self._redis.batch_get_states(stale_ids)
             except Exception as e:
-                logger.warning(f"Redis batch_get_states failed in stale release check: {e}")
+                logger.warning(
+                    f"Redis batch_get_states failed in stale release check: {e}"
+                )
                 return
 
             for worker in stale:
@@ -380,7 +384,9 @@ class BaseWorkerPool(ABC):
                 try:
                     headers = {"X-API-Key": API_KEY} if API_KEY else {}
                     async with httpx.AsyncClient(timeout=WORKER_TIMEOUT) as client:
-                        resp = await client.get(worker.get_health_url(), headers=headers)
+                        resp = await client.get(
+                            worker.get_health_url(), headers=headers
+                        )
                     if resp.status_code == 200:
                         worker_confirmed_idle = resp.json().get("current_call") is None
                 except Exception as health_err:
@@ -504,8 +510,12 @@ class BaseWorkerPool(ABC):
         if not candidates:
             async with self._lock:
                 total = len(self.workers)
-                busy = sum(1 for w in self.workers.values() if w.current_call_sid is not None)
-                unhealthy = sum(1 for w in self.workers.values() if w.consecutive_failures >= 3)
+                busy = sum(
+                    1 for w in self.workers.values() if w.current_call_sid is not None
+                )
+                unhealthy = sum(
+                    1 for w in self.workers.values() if w.consecutive_failures >= 3
+                )
             logger.warning(
                 f"No available workers for call {call_sid}: "
                 f"total={total} busy={busy} unhealthy={unhealthy}"
@@ -556,8 +566,12 @@ class BaseWorkerPool(ABC):
                     )
                     return worker
             total = len(self.workers)
-            busy = sum(1 for w in self.workers.values() if w.current_call_sid is not None)
-            unhealthy = sum(1 for w in self.workers.values() if w.consecutive_failures >= 3)
+            busy = sum(
+                1 for w in self.workers.values() if w.current_call_sid is not None
+            )
+            unhealthy = sum(
+                1 for w in self.workers.values() if w.consecutive_failures >= 3
+            )
             logger.warning(
                 f"No available workers for call {call_sid}: "
                 f"total={total} busy={busy} unhealthy={unhealthy}"
@@ -573,7 +587,9 @@ class BaseWorkerPool(ABC):
             try:
                 worker_id = await self._redis.get_worker_for_call(call_sid)
             except Exception as e:
-                logger.warning(f"Redis error in get_worker_for_call for {call_sid}: {e}")
+                logger.warning(
+                    f"Redis error in get_worker_for_call for {call_sid}: {e}"
+                )
                 worker_id = None
 
             if worker_id:
@@ -802,7 +818,9 @@ class BaseWorkerPool(ABC):
         for w in snapshot:
             state = redis_states.get(w.instance_id, {})
             # Redis is authoritative; fall back to local cache if Redis unavailable.
-            current_call_sid = state.get("current_call_sid") or w.current_call_sid or None
+            current_call_sid = (
+                state.get("current_call_sid") or w.current_call_sid or None
+            )
             assigned_at_raw = state.get("assigned_at") or (
                 str(w.assigned_at) if w.assigned_at else None
             )

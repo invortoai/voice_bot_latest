@@ -96,7 +96,10 @@ class MetricsProcessor(FrameProcessor):
                 turn = self._m.on_bot_started_speaking()
                 if turn is not None:
                     safe_observe(
-                        record_turn_latency, self._org_id, self._provider, turn["total_ms"]
+                        record_turn_latency,
+                        self._org_id,
+                        self._provider,
+                        turn["total_ms"],
                     )
                     safe_observe(
                         emit_turn_completed,
@@ -174,7 +177,10 @@ class TranscriptionStatsProcessor(FrameProcessor):
 
     async def process_frame(self, frame, direction):
         await super().process_frame(frame, direction)
-        if isinstance(frame, TranscriptionFrame) and direction == FrameDirection.DOWNSTREAM:
+        if (
+            isinstance(frame, TranscriptionFrame)
+            and direction == FrameDirection.DOWNSTREAM
+        ):
             self._m.on_transcript(frame.text)
             if not frame.text.strip():
                 safe_observe(

@@ -11,7 +11,6 @@ All endpoints use verify_customer_api_key (per-org X-API-Key header).
 import uuid
 
 import psycopg2
-import pytest
 from psycopg2.extras import Json
 
 # Counter for unique phone-number suffixes per test run

@@ -107,7 +107,9 @@ class CallMetrics:
     def record_client_disconnected(self) -> None:
         self._client_disconnected_at = time.monotonic()
 
-    def record_call_ended(self, ended_by: str, error_type: Optional[str] = None) -> None:
+    def record_call_ended(
+        self, ended_by: str, error_type: Optional[str] = None
+    ) -> None:
         self._ended_by = ended_by
         self._error_type = error_type
 
@@ -247,6 +249,7 @@ class CallMetrics:
             if IS_LOCAL:
                 raise
             import logging
+
             logging.getLogger(__name__).debug("on_metrics_frame error: %s", exc)
 
     # ------------------------------------------------------------------
@@ -264,14 +267,23 @@ class CallMetrics:
             il["transport_hop_ms"] = round(self._transport_hop_ms, 1)
         il["ws_msg_recv_ms"] = ms_diff(self._ws_accepted_at, self._ws_msg_recv_at)
         il["config_resolve_ms"] = ms_diff(self._ws_msg_recv_at, self._config_resolve_at)
-        il["pipeline_build_ms"] = ms_diff(self._config_resolve_at, self._pipeline_ready_at)
-        il["transport_start_ms"] = ms_diff(self._pipeline_ready_at, self._greeting_queued_at)
-        il["greeting_tts_ttfb_ms"] = ms_diff(self._greeting_queued_at, self._first_bot_audio_at)
+        il["pipeline_build_ms"] = ms_diff(
+            self._config_resolve_at, self._pipeline_ready_at
+        )
+        il["transport_start_ms"] = ms_diff(
+            self._pipeline_ready_at, self._greeting_queued_at
+        )
+        il["greeting_tts_ttfb_ms"] = ms_diff(
+            self._greeting_queued_at, self._first_bot_audio_at
+        )
         worker_ms = ms_diff(self._ws_accepted_at, self._first_bot_audio_at)
         il["worker_ms"] = worker_ms
         if worker_ms is not None:
             il["total_ms"] = round(
-                (self._runner_webhook_ms or 0) + (self._transport_hop_ms or 0) + worker_ms, 1
+                (self._runner_webhook_ms or 0)
+                + (self._transport_hop_ms or 0)
+                + worker_ms,
+                1,
             )
 
         return {

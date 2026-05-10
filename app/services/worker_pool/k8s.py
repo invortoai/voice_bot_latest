@@ -1,8 +1,5 @@
-from typing import Optional
-
 from loguru import logger
 
-from app.config import WORKER_PORT
 from app.core.tracing import trace_class
 from app.services.worker_pool.base import BaseWorkerPool, WorkerStatus
 

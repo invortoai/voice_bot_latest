@@ -66,8 +66,6 @@ from app.worker.otel_metrics import record_call_start, record_call_end, record_p
 from app.observability.utils import safe_observe
 
 
-
-
 # ── Worker management endpoint authentication ────────────────────────────────
 
 
@@ -555,7 +553,9 @@ async def _handle_call(
         msg_parsed_at = time.monotonic()
         call_sid = provider.extract_call_sid(call_info, path_call_sid)
         set_log_context(call_sid=call_sid, provider=provider.name.lower())
-        _set_span_attrs(**{"call_sid": call_sid, "telephony.provider": provider.name.lower()})
+        _set_span_attrs(
+            **{"call_sid": call_sid, "telephony.provider": provider.name.lower()}
+        )
         logger.info(f"[{provider.name}] call_sid={call_sid}: WebSocket call started")
 
         # Mark call as active immediately after extracting call_sid.

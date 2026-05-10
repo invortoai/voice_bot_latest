@@ -11,10 +11,7 @@ Flow:
 
 from __future__ import annotations
 
-import asyncio
-import textwrap
 from typing import Optional
-from uuid import UUID
 
 import httpx
 from loguru import logger
@@ -54,6 +51,7 @@ async def _embed_texts(texts: list[str]) -> list[list[float]]:
 
 # ── Chunking ──────────────────────────────────────────────────────────────────
 
+
 def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
     """
     Split text into overlapping chunks by word count.
@@ -77,6 +75,7 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> list[str
 
 
 # ── Knowledge Base CRUD ───────────────────────────────────────────────────────
+
 
 def create_knowledge_base(
     name: str,
@@ -140,6 +139,7 @@ def delete_knowledge_base(kb_id: str, org_id: Optional[str] = None) -> bool:
 
 # ── Document CRUD ─────────────────────────────────────────────────────────────
 
+
 def create_document(
     kb_id: str,
     title: str,
@@ -150,6 +150,7 @@ def create_document(
     metadata: Optional[dict] = None,
 ) -> dict:
     from psycopg2.extras import Json
+
     with get_cursor() as cur:
         cur.execute(
             """
@@ -204,6 +205,7 @@ def delete_document(doc_id: str, org_id: Optional[str] = None) -> bool:
 
 # ── Document Processing (chunking + embedding) ────────────────────────────────
 
+
 async def process_document(doc_id: str) -> None:
     """
     Chunk a document and generate + store embeddings.
@@ -256,6 +258,7 @@ async def process_document(doc_id: str) -> None:
 
         # 5. Insert new chunks with embeddings
         from psycopg2.extras import Json, execute_values
+
         rows = [
             (
                 doc_id,
@@ -304,6 +307,7 @@ async def process_document(doc_id: str) -> None:
 
 
 # ── RAG Search ────────────────────────────────────────────────────────────────
+
 
 async def search_knowledge(
     kb_id: str,

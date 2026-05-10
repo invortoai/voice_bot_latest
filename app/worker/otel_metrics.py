@@ -140,7 +140,9 @@ def record_call_start(org_id: str, provider: str, call_type: str = "inbound") ->
     _instruments()
 
 
-def record_call_end(d: dict, org_id: str, provider: str, call_type: str = "inbound") -> None:
+def record_call_end(
+    d: dict, org_id: str, provider: str, call_type: str = "inbound"
+) -> None:
     """Record all end-of-call metrics from the completed call metrics dict.
 
     Accepts a pre-built dict (from CallMetrics.to_dict()) so the caller
@@ -177,7 +179,9 @@ def record_call_end(d: dict, org_id: str, provider: str, call_type: str = "inbou
             total_ms,
             {
                 **base_attrs,
-                "prewarm_used": str(pw.get("stt", False) or pw.get("tts", False)).lower(),
+                "prewarm_used": str(
+                    pw.get("stt", False) or pw.get("tts", False)
+                ).lower(),
             },
         )
 
@@ -190,7 +194,9 @@ def record_call_end(d: dict, org_id: str, provider: str, call_type: str = "inbou
     if tokens_in := llm.get("tokens_in") or 0:
         instr["llm_tokens"].add(tokens_in, {**llm_attrs, "gen_ai.token.type": "input"})
     if tokens_out := llm.get("tokens_out") or 0:
-        instr["llm_tokens"].add(tokens_out, {**llm_attrs, "gen_ai.token.type": "output"})
+        instr["llm_tokens"].add(
+            tokens_out, {**llm_attrs, "gen_ai.token.type": "output"}
+        )
 
     tts = d.get("tts") or {}
     if chars := tts.get("characters") or 0:
@@ -210,7 +216,11 @@ def record_stt_ttfb(model: str, system: str, org_id: str, value_ms: float) -> No
         return
     instr["stt_ttfb"].record(
         value_ms,
-        {"gen_ai.system": system, "gen_ai.request.model": model, "org_id": org_id or "unknown"},
+        {
+            "gen_ai.system": system,
+            "gen_ai.request.model": model,
+            "org_id": org_id or "unknown",
+        },
     )
 
 
@@ -220,7 +230,11 @@ def record_llm_ttfb(model: str, system: str, org_id: str, value_ms: float) -> No
         return
     instr["llm_ttfb"].record(
         value_ms,
-        {"gen_ai.system": system, "gen_ai.request.model": model, "org_id": org_id or "unknown"},
+        {
+            "gen_ai.system": system,
+            "gen_ai.request.model": model,
+            "org_id": org_id or "unknown",
+        },
     )
 
 
@@ -230,7 +244,11 @@ def record_tts_ttfb(model: str, system: str, org_id: str, value_ms: float) -> No
         return
     instr["tts_ttfb"].record(
         value_ms,
-        {"gen_ai.system": system, "gen_ai.request.model": model, "org_id": org_id or "unknown"},
+        {
+            "gen_ai.system": system,
+            "gen_ai.request.model": model,
+            "org_id": org_id or "unknown",
+        },
     )
 
 
@@ -244,7 +262,9 @@ def record_turn_latency(org_id: str, provider: str, value_ms: float) -> None:
     )
 
 
-def record_service_error(service: str, system: str, error_type: str, org_id: str) -> None:
+def record_service_error(
+    service: str, system: str, error_type: str, org_id: str
+) -> None:
     """Record one service error (e.g. STT empty transcript, LLM timeout, TTS failure).
 
     service   : 'stt' | 'llm' | 'tts'

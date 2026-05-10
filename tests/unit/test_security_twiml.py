@@ -1,6 +1,5 @@
 """Unit tests for safe TwiML generation using SDK (DAAI-159)."""
 
-import pytest
 from xml.etree import ElementTree
 
 from app.services.outbound.twilio import _build_twiml

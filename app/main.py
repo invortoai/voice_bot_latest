@@ -20,16 +20,16 @@ from app.core.rate_limiter import limiter
 # correct format from the start.
 setup_logging("runner", environment=ENVIRONMENT)
 
-from app.observability.otel import setup_otel
-from app.core.tracing import register_library_instrumentors
+from app.observability.otel import setup_otel  # noqa: E402
+from app.core.tracing import register_library_instrumentors  # noqa: E402
 
 setup_otel(service_name="invorto-runner", environment=ENVIRONMENT)
 register_library_instrumentors()
 
-from app.middleware import RequestContextMiddleware, HttpMetricsMiddleware
-from app.services.webhook_worker import WebhookWorker
-from app.services.worker_pool import worker_pool
-from app.routes import (
+from app.middleware import RequestContextMiddleware, HttpMetricsMiddleware  # noqa: E402
+from app.services.webhook_worker import WebhookWorker  # noqa: E402
+from app.services.worker_pool import worker_pool  # noqa: E402
+from app.routes import (  # noqa: E402
     assistants_router,
     phone_numbers_router,
     calls_router,
@@ -112,7 +112,7 @@ async def lifespan(app: FastAPI):
 # ── Customer-friendly error handlers (defined before app so they can be passed
 #    into FastAPI() constructor — only way to reliably override defaults) ────────
 
-import json as _json
+import json as _json  # noqa: E402
 
 
 async def _validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -261,11 +261,15 @@ try:
 
     def _observe_workers(options):
         try:
-            available = sum(1 for w in worker_pool.workers.values() if w.is_accepting_calls)
+            available = sum(
+                1 for w in worker_pool.workers.values() if w.is_accepting_calls
+            )
             total = len(worker_pool.workers)
             _base = {"host.name": _runner_host}
             yield _otel_metrics.Observation(available, {**_base, "state": "available"})
-            yield _otel_metrics.Observation(total - available, {**_base, "state": "busy"})
+            yield _otel_metrics.Observation(
+                total - available, {**_base, "state": "busy"}
+            )
         except Exception as exc:
             _logging.getLogger(__name__).debug("worker gauge callback error: %s", exc)
 
@@ -323,9 +327,9 @@ app.include_router(jambonz_router)
 # MCube webhooks (no authentication - MCube doesn't send API keys)
 app.include_router(mcube_router)
 
-from app.routes.insights_config import router as insights_config_router
-from app.routes.insights_analyse import router as insights_analyse_router
-from app.routes.knowledge import router as knowledge_router
+from app.routes.insights_config import router as insights_config_router  # noqa: E402
+from app.routes.insights_analyse import router as insights_analyse_router  # noqa: E402
+from app.routes.knowledge import router as knowledge_router  # noqa: E402
 
 app.include_router(insights_config_router)
 app.include_router(insights_analyse_router)

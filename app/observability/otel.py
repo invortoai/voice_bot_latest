@@ -110,7 +110,20 @@ def setup_otel(
         from opentelemetry.sdk.metrics.view import View
 
         _VOICE_MS_BUCKETS = [
-            50, 100, 150, 200, 300, 400, 500, 750, 1000, 1500, 2000, 3000, 5000, 10000,
+            50,
+            100,
+            150,
+            200,
+            300,
+            400,
+            500,
+            750,
+            1000,
+            1500,
+            2000,
+            3000,
+            5000,
+            10000,
         ]
         _DURATION_S_BUCKETS = [10, 30, 60, 120, 180, 300, 600, 1800]
 
@@ -183,9 +196,7 @@ def setup_otel(
 
                 logger_provider.add_log_record_processor(
                     BatchLogRecordProcessor(
-                        OTLPLogExporter(
-                            endpoint=f"{endpoint}/v1/logs", headers=headers
-                        )
+                        OTLPLogExporter(endpoint=f"{endpoint}/v1/logs", headers=headers)
                     )
                 )
 

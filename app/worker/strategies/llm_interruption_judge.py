@@ -24,6 +24,7 @@ try:
     from pipecat.utils.tracing.conversation_context_provider import (
         ConversationContextProvider,
     )
+
     _TRACING_AVAILABLE = True
 except ImportError:  # pragma: no cover — pipecat without turn tracing
     _TRACING_AVAILABLE = False
@@ -64,6 +65,7 @@ def _capture_tracing_parent_context():
     except Exception:
         return None
     return None
+
 
 _TRACER = trace.get_tracer("invorto.interruption_judge")
 
@@ -201,9 +203,7 @@ class LLMInterruptionJudgeStrategy(BaseUserTurnStartStrategy):
         # context when pipecat has already closed the turn (e.g. between turns
         # while the bot's TTS is playing).
         parent_context = (
-            _capture_tracing_parent_context()
-            if is_pipecat_tracing_enabled()
-            else None
+            _capture_tracing_parent_context() if is_pipecat_tracing_enabled() else None
         )
 
         self._pending_judge_task = self.task_manager.create_task(

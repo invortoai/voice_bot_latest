@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -308,7 +308,7 @@ async def initiate_outbound_call(
         phone_config = phone_number_service.get_by_id(
             str(request.phone_number_id), org_id=org_id
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Database error fetching phone config")
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -328,7 +328,7 @@ async def initiate_outbound_call(
         assistant_config = assistant_service.get_by_id(
             str(request.assistant_id), org_id=org_id
         )
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to fetch assistant configuration")
         raise HTTPException(
             status_code=500, detail="Failed to fetch assistant configuration"
@@ -438,7 +438,7 @@ async def initiate_outbound_call(
                 call_id=call_id,
                 parent_call_sid=parent_call_id,
             )
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to log call to database")
 
         logger.info(f"Call routed to worker {worker.instance_id}: {result.call_sid}")

@@ -1,6 +1,5 @@
 """Unit tests for caller ID sanitization to prevent LLM prompt injection (DAAI-141)."""
 
-import pytest
 from app.worker.config import _sanitize_phone
 
 

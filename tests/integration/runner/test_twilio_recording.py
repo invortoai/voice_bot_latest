@@ -21,7 +21,6 @@ def _bypass_twilio_auth():
 
     Same pattern as test_twilio_webhook.py. Auth is tested in test_security_*.py.
     """
-    from unittest.mock import AsyncMock
 
     with patch("app.routes.twilio._verify_twilio_webhook", new_callable=AsyncMock):
         yield

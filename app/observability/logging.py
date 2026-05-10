@@ -43,18 +43,29 @@ _LEVEL_COLORS = {
 # Context fields printed in this order in text format; trace_id/span_id first
 # for quick copy-paste into APM search.
 _ORDERED_CTX = (
-    "trace_id", "span_id",
+    "trace_id",
+    "span_id",
     "request_id",
     "event_type",
-    "org_id", "call_sid", "provider",
+    "org_id",
+    "call_sid",
+    "provider",
 )
 
 # Top-level JSON fields that must not be overwritten by extra fields.
-_JSON_PROTECTED = frozenset({
-    "timestamp", "severity", "level", "message",
-    "env", "thread",
-    "code.file", "code.function", "code.line",
-})
+_JSON_PROTECTED = frozenset(
+    {
+        "timestamp",
+        "severity",
+        "level",
+        "message",
+        "env",
+        "thread",
+        "code.file",
+        "code.function",
+        "code.line",
+    }
+)
 
 
 class InterceptHandler(logging.Handler):
@@ -89,9 +100,7 @@ def _make_text_sink(stream: IO[str], colorize: bool = False) -> Callable:
         msg = record["message"]
 
         extra = record["extra"]
-        ctx_pairs: list[str] = [
-            f"{k}={extra[k]}" for k in _ORDERED_CTX if extra.get(k)
-        ]
+        ctx_pairs: list[str] = [f"{k}={extra[k]}" for k in _ORDERED_CTX if extra.get(k)]
         seen = set(_ORDERED_CTX)
         for k, v in extra.items():
             if k not in seen and v is not None:
@@ -104,9 +113,12 @@ def _make_text_sink(stream: IO[str], colorize: bool = False) -> Callable:
 
         exc = record["exception"]
         if exc and exc.value:
-            line += "\n" + "".join(
-                _tb.format_exception(exc.type, exc.value, exc.traceback)
-            ).rstrip()
+            line += (
+                "\n"
+                + "".join(
+                    _tb.format_exception(exc.type, exc.value, exc.traceback)
+                ).rstrip()
+            )
 
         if colorize:
             color = _LEVEL_COLORS.get(level, "")
@@ -157,7 +169,9 @@ def _build_json_entry(record: dict, resource: dict) -> dict:
     return entry
 
 
-def _make_json_sink(resource: dict, stream: IO[str], colorize: bool = False) -> Callable:
+def _make_json_sink(
+    resource: dict, stream: IO[str], colorize: bool = False
+) -> Callable:
     def _sink(message):
         entry = _build_json_entry(message.record, resource)
         line = json.dumps(entry, default=str)
@@ -182,8 +196,13 @@ def _make_otlp_log_sink(service_name: str) -> Callable:
     Complex values (lists, dicts) are JSON-encoded so DataPrime can parse them.
     """
     _SEV: dict = {
-        "TRACE": 1, "DEBUG": 5, "INFO": 9, "SUCCESS": 9,
-        "WARNING": 13, "ERROR": 17, "CRITICAL": 21,
+        "TRACE": 1,
+        "DEBUG": 5,
+        "INFO": 9,
+        "SUCCESS": 9,
+        "WARNING": 13,
+        "ERROR": 17,
+        "CRITICAL": 21,
     }
     _last_error: list[str] = [""]  # mutable cell for dedup without nonlocal
 
@@ -215,7 +234,11 @@ def _make_otlp_log_sink(service_name: str) -> Callable:
                 if v is None or k in ("trace_id", "span_id"):
                     continue
                 # Complex types JSON-encoded so DataPrime can parse/query them.
-                attrs[k] = v if isinstance(v, (str, int, float, bool)) else json.dumps(v, default=str)
+                attrs[k] = (
+                    v
+                    if isinstance(v, (str, int, float, bool))
+                    else json.dumps(v, default=str)
+                )
 
             exc = record["exception"]
             if exc and exc.value:
@@ -272,7 +295,9 @@ def _intercept_stdlib_loggers() -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
-def _build_resource(service_name: str, environment: str, host: str, version: str = "unknown") -> dict:
+def _build_resource(
+    service_name: str, environment: str, host: str, version: str = "unknown"
+) -> dict:
     return {
         "service.name": service_name,
         "service.version": version,
@@ -308,9 +333,19 @@ def setup_logging(
     is_local = environment.lower() in ("local", "dev", "development")
     host = socket.gethostname()
 
-    _fmt = (log_format or os.getenv("LOG_FORMAT", "text" if is_local else "json")).lower()
+    _fmt = (
+        log_format or os.getenv("LOG_FORMAT", "text" if is_local else "json")
+    ).lower()
 
-    _valid_levels = {"TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"}
+    _valid_levels = {
+        "TRACE",
+        "DEBUG",
+        "INFO",
+        "SUCCESS",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    }
     _lvl_env = (log_level or os.getenv("LOG_LEVEL", "DEBUG")).upper()
     _lvl = _lvl_env if _lvl_env in _valid_levels else "INFO"
 
@@ -336,7 +371,9 @@ def setup_logging(
     # ── stdout (always active) ────────────────────────────────────────────────
     _colorize = is_local
     if _fmt == "json":
-        logger.add(_make_json_sink(resource, sys.stdout, colorize=_colorize), level=_lvl)
+        logger.add(
+            _make_json_sink(resource, sys.stdout, colorize=_colorize), level=_lvl
+        )
     else:
         logger.add(_make_text_sink(sys.stdout, colorize=_colorize), level=_lvl)
 
@@ -345,7 +382,9 @@ def setup_logging(
         logger.add(_make_otlp_log_sink(service_name), level=_lvl)
         logger.info(
             "Logging: format=%s level=%s destination=otlp endpoint=%s",
-            _fmt, _lvl, otlp_endpoint,
+            _fmt,
+            _lvl,
+            otlp_endpoint,
         )
     else:
         logger.info("Logging: format=%s level=%s destination=stdout", _fmt, _lvl)

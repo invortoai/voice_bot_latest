@@ -40,6 +40,7 @@ def set_span_attrs(**attrs) -> None:
     """Set key=value attributes on the active OTEL span; no-ops if none is recording."""
     try:
         from opentelemetry import trace as _trace
+
         span = _trace.get_current_span()
         if span.is_recording():
             for k, v in attrs.items():

@@ -346,7 +346,11 @@ async def create_pipeline(
             temperature=config.temperature,
             max_completion_tokens=config.max_completion_tokens,
             # Only pass service_tier when set — passing None causes an OpenAI API error.
-            **({"service_tier": config.service_tier} if config.service_tier is not None else {}),
+            **(
+                {"service_tier": config.service_tier}
+                if config.service_tier is not None
+                else {}
+            ),
         )
         logger.info(
             f"Creating LLM: provider={config.llm_provider!r}, model={config.model!r}, "

@@ -149,8 +149,8 @@ class AssistantConfig:
         # 'llm_judge' → LLMInterruptionJudgeStrategy.
         # Unknown values fall back to 'default' downstream in the pipeline.
         self.interruption_strategy = (
-            config.get("interruption_strategy") or "default"
-        ).strip().lower()
+            (config.get("interruption_strategy") or "default").strip().lower()
+        )
 
     def _load_from_phone_config(self, config: dict):
         # Extract Twilio credentials from provider_credentials JSONB column

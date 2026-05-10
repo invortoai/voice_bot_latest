@@ -17,7 +17,6 @@ Tests:
   - Missing key → 401
 """
 
-import pytest
 from unittest.mock import patch
 
 

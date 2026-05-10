@@ -330,7 +330,9 @@ async def mcube_call(payload: McubeConnectWebhookRequest):
     """
     call_identifiers = _determine_call_identifiers(payload)
     set_log_context(call_sid=call_identifiers.call_sid, provider="mcube")
-    set_span_attrs(**{"call_sid": call_identifiers.call_sid, "telephony.provider": "mcube"})
+    set_span_attrs(
+        **{"call_sid": call_identifiers.call_sid, "telephony.provider": "mcube"}
+    )
     logger.info(
         f"MCube webhook received: {payload.call_direction} call {payload.call_id} status={payload.dial_status}"
     )
