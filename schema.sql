@@ -7,12 +7,29 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS organizations (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name                TEXT,
+    org_type            TEXT NOT NULL DEFAULT 'standard',
     is_active           BOOLEAN NOT NULL DEFAULT TRUE,
     max_api_keys        INT NOT NULL DEFAULT 10,
     max_active_api_keys INT NOT NULL DEFAULT 5,
+    default_bot_id      UUID,
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ── org_users ─────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS org_users (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id        UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    email         TEXT NOT NULL UNIQUE,
+    name          TEXT,
+    role          TEXT NOT NULL DEFAULT 'member',
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    password_hash TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_org_users_org ON org_users(org_id);
+CREATE INDEX IF NOT EXISTS idx_org_users_email ON org_users(email);
 
 -- ── refresh_tokens ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -116,6 +133,18 @@ CREATE TABLE IF NOT EXISTS campaigns (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_campaigns_org ON campaigns(org_id);
+
+-- ── campaign_phone_numbers ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS campaign_phone_numbers (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    campaign_id     UUID REFERENCES campaigns(id) ON DELETE CASCADE,
+    org_id          UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    phone_number    TEXT NOT NULL,
+    status          TEXT NOT NULL DEFAULT 'pending',
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_campaign_phone_numbers_campaign ON campaign_phone_numbers(campaign_id);
 
 -- ── calls ──────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS calls (

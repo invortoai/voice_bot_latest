@@ -74,7 +74,10 @@ def pg_container():
 def _run_migrations(dsn: str) -> None:
     """Run every SQL migration file in sorted order against *dsn*.
 
-    Migrations live in the db/supabase/migrations/ submodule.
+    Primary location: db/supabase/migrations/ (git submodule — full Supabase history).
+    CI fallback:      schema.sql (base schema) + migrations/*.sql (app-level migrations)
+                      used when the Bitbucket submodule is not available.
+
     Each statement is executed individually so that Supabase-specific DDL
     (GRANT to anon/authenticated roles, INSERT into storage.buckets, etc.)
     can fail gracefully without blocking the rest of the migration file.
@@ -84,8 +87,18 @@ def _run_migrations(dsn: str) -> None:
     migration_files = sorted(glob.glob(pattern))
 
     if not migration_files:
+        # Submodule not initialised (e.g. CI without Bitbucket access).
+        # Fall back to schema.sql + migrations/*.sql checked into this repo.
+        fallback_schema = os.path.join(repo_root, "schema.sql")
+        fallback_migrations = sorted(glob.glob(os.path.join(repo_root, "migrations", "*.sql")))
+        migration_files = []
+        if os.path.exists(fallback_schema):
+            migration_files.append(fallback_schema)
+        migration_files.extend(fallback_migrations)
+
+    if not migration_files:
         raise RuntimeError(
-            f"No migration files found at {pattern}. "
+            f"No migration files found at {pattern} or schema.sql/migrations/. "
             "Make sure the db submodule is initialised: `git submodule update --init`"
         )
 
