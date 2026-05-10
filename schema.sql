@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS calls (
     worker_host          TEXT,
     custom_params        JSONB NOT NULL DEFAULT '{}',
     provider_metadata    JSONB NOT NULL DEFAULT '{}',
+    metrics              JSONB NOT NULL DEFAULT '{}',
     provider             TEXT NOT NULL DEFAULT 'twilio',
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -222,16 +223,21 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     event_type      TEXT NOT NULL,
     webhook_url     TEXT NOT NULL,
     payload         JSONB NOT NULL DEFAULT '{}',
-    status          TEXT NOT NULL DEFAULT 'pending',
-    attempts        INT NOT NULL DEFAULT 0,
-    attempt_number  INT NOT NULL DEFAULT 0,
-    max_attempts    INT NOT NULL DEFAULT 5,
-    last_attempt_at TIMESTAMPTZ,
-    next_retry_at   TIMESTAMPTZ,
-    response_code   INT,
-    response_body   TEXT,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    status               TEXT NOT NULL DEFAULT 'pending',
+    attempts             INT NOT NULL DEFAULT 0,
+    attempt_number       INT NOT NULL DEFAULT 0,
+    max_attempts         INT NOT NULL DEFAULT 5,
+    last_attempt_at      TIMESTAMPTZ,
+    last_attempted_at    TIMESTAMPTZ,
+    next_retry_at        TIMESTAMPTZ,
+    delivered_at         TIMESTAMPTZ,
+    response_code        INT,
+    response_status_code INT,
+    response_body        TEXT,
+    response_time_ms     INT,
+    error_message        TEXT,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_org ON webhook_deliveries(org_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status);

@@ -552,7 +552,11 @@ async def submit_external_request_upload(
     # delete of the now-orphaned S3 object before propagating the error (Bug B fix).
     try:
         result = await asyncio.to_thread(_submit_job, org_id, body, job_id)
-    except Exception:
+    except HTTPException:
+        # Re-raise HTTPExceptions (e.g. 422 no default config) — these are
+        # intentional client errors, not DB failures, so no S3 cleanup needed.
+        raise
+    except Exception as db_exc:
         try:
             _get_s3_client().delete_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
             logger.warning(f"Cleaned up orphaned S3 object after DB failure: {s3_key}")
@@ -560,7 +564,9 @@ async def submit_external_request_upload(
             logger.error(
                 f"Failed to clean up orphaned S3 object {s3_key}: {cleanup_exc}"
             )
-        raise
+        # Return 500 directly rather than re-raising to avoid propagation
+        # through BaseHTTPMiddleware task groups (anyio ExceptionGroup issue).
+        raise HTTPException(status_code=500, detail=f"DB error: {db_exc}") from db_exc
 
     return result
 
