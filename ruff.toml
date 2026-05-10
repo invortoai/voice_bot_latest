@@ -1,0 +1,4 @@
+[lint]
+# E402: module-level imports not at top (intentional in main.py and some test fixtures)
+# F841: local variable assigned but never used (pre-existing in test files)
+ignore = ["E402", "F841"]
