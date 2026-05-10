@@ -18,16 +18,16 @@ Endpoints:
 
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from app.core.auth import require_api_key
+from app.core.auth import verify_api_key
 from app.services import knowledge_service
 
 router = APIRouter(
     prefix="/knowledge-bases",
     tags=["Knowledge Base"],
-    dependencies=[require_api_key],
+    dependencies=[Depends(verify_api_key)],
 )
 
 

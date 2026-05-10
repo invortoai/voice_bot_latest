@@ -205,7 +205,7 @@ async def twilio_call_status(request: Request):
 async def twilio_recording_status(request: Request):
     form_data = await request.form()
     call_sid = form_data.get("CallSid", "")
-    recording_url = (form_data.get("RecordingUrl") or "").strip() or None
+    recording_url = (form_data.get("RecordingUrl") or "").strip() or None  # type: ignore[union-attr]
     recording_status = form_data.get("RecordingStatus", "")
 
     logger.info(
@@ -227,7 +227,7 @@ async def twilio_recording_status(request: Request):
 
     if call_sid and recording_url and recording_status == "completed":
         try:
-            updated = call_service.set_recording_url(call_sid, recording_url)
+            updated = call_service.set_recording_url(call_sid, recording_url)  # type: ignore[arg-type]
             logger.info(f"Recording URL stored for call {call_sid}")
             # Sync recording_url to call_requests via parent_call_sid (= call_requests.id).
             # For inbound calls (no call_requests row), parent_call_sid is None → no-op.
