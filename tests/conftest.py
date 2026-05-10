@@ -50,6 +50,7 @@ def pg_container():
         dsn = (
             f"postgresql://{pg.username}:{pg.password}"
             f"@{pg.get_container_host_ip()}:{pg.get_exposed_port(5432)}/{pg.dbname}"
+            f"?sslmode=disable"
         )
 
         # Patch the module-level DATABASE_URL binding *before* any DB call.

@@ -7,13 +7,15 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS organizations (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name                TEXT,
-    org_type            TEXT NOT NULL DEFAULT 'standard',
-    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
-    max_api_keys        INT NOT NULL DEFAULT 10,
-    max_active_api_keys INT NOT NULL DEFAULT 5,
-    default_bot_id      UUID,
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    org_type              TEXT NOT NULL DEFAULT 'standard',
+    is_active             BOOLEAN NOT NULL DEFAULT TRUE,
+    max_api_keys          INT NOT NULL DEFAULT 10,
+    max_active_api_keys   INT NOT NULL DEFAULT 5,
+    default_bot_id        UUID,
+    minutes_consumed      INT NOT NULL DEFAULT 0,
+    total_minutes_ordered INT NOT NULL DEFAULT 0,
+    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- ── org_users ─────────────────────────────────────────────────────────────────
