@@ -15,6 +15,9 @@ import secrets
 
 # Override env vars before any app import so that app/config.py picks them up.
 # load_dotenv(override=False) does not overwrite keys already present in os.environ.
+os.environ.setdefault(
+    "ENVIRONMENT", "local"
+)  # IS_LOCAL=True → API_KEY="" disables auth
 os.environ.setdefault("API_KEY", "")
 os.environ["API_KEY"] = ""  # force empty → global auth disabled in tests
 os.environ.setdefault("DATABASE_URL", "postgresql://dummy:dummy@localhost:5432/dummy")

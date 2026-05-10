@@ -36,10 +36,11 @@ CREATE INDEX IF NOT EXISTS idx_org_users_email ON org_users(email);
 -- ── refresh_tokens ─────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id    TEXT NOT NULL,
+    user_id    UUID NOT NULL REFERENCES org_users(id) ON DELETE CASCADE,
     org_id     UUID REFERENCES organizations(id) ON DELETE CASCADE,
     token_hash TEXT NOT NULL UNIQUE,
     expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
@@ -166,6 +167,7 @@ CREATE TABLE IF NOT EXISTS calls (
     error_code           TEXT,
     error_message        TEXT,
     recording_url        TEXT,
+    summary              TEXT,
     worker_instance_id   TEXT,
     worker_host          TEXT,
     custom_params        JSONB NOT NULL DEFAULT '{}',
@@ -192,10 +194,17 @@ CREATE TABLE IF NOT EXISTS call_requests (
     additional_data JSONB,
     callback_url    TEXT,
     scheduled_at    TIMESTAMPTZ,
-    priority        INT NOT NULL DEFAULT 100,
-    status          TEXT NOT NULL DEFAULT 'queued',
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    priority                INT NOT NULL DEFAULT 100,
+    status                  TEXT NOT NULL DEFAULT 'queued',
+    call_status             TEXT,
+    call_direction          TEXT,
+    call_start_time         TIMESTAMPTZ,
+    call_end_time           TIMESTAMPTZ,
+    call_duration_seconds   INT,
+    call_duration_minutes   FLOAT,
+    recording_url           TEXT,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_call_requests_org ON call_requests(org_id);
 CREATE INDEX IF NOT EXISTS idx_call_requests_status ON call_requests(status);
@@ -231,10 +240,11 @@ CREATE TABLE IF NOT EXISTS org_api_keys (
     is_active   BOOLEAN NOT NULL DEFAULT TRUE,
     scopes      JSONB NOT NULL DEFAULT '[]',
     metadata    JSONB NOT NULL DEFAULT '{}',
-    expires_at  TIMESTAMPTZ,
-    created_by  TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    expires_at   TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    created_by   TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_org_api_keys_org ON org_api_keys(org_id);
 CREATE INDEX IF NOT EXISTS idx_org_api_keys_hash ON org_api_keys(key_hash);

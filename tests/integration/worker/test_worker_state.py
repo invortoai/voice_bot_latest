@@ -34,7 +34,7 @@ class TestWorkerAssignment:
         worker = await pool.get_and_assign_worker("CALL-001")
         assert worker is not None
         assert worker.current_call_sid == "CALL-001"
-        assert worker.is_available is False
+        assert worker.is_accepting_calls is False
 
     async def test_get_and_assign_worker_is_atomic(self, pool):
         w1 = await pool.get_and_assign_worker("CALL-001")
@@ -82,7 +82,7 @@ class TestWorkerRelease:
 
         released_worker = pool.workers[instance_id]
         assert released_worker.current_call_sid is None
-        assert released_worker.is_available is True
+        assert released_worker.is_accepting_calls is True
 
 
 class TestWorkerReassign:
