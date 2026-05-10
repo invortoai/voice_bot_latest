@@ -10,3 +10,4 @@ anyio>=4.0
 httpx>=0.27
 slowapi>=0.1.9
 fakeredis[aioredis,lua]>=2.23
+openai>=1.0

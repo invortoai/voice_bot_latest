@@ -183,6 +183,20 @@ _PIPECAT_STUBS: dict = {
     "app.worker.providers.jambonz": MagicMock(),
     "app.worker.providers.mcube": MagicMock(),
     "app.worker.providers.twilio": MagicMock(),
+    # strategies — llm_interruption_judge imports openai + pipecat internals not
+    # covered by the stubs above; stub the whole module so pipeline.py can import
+    # LLMInterruptionJudgeStrategy without the worker deps being installed.
+    "app.worker.strategies": MagicMock(),
+    "app.worker.strategies.llm_interruption_judge": _make_mod(
+        LLMInterruptionJudgeStrategy=MagicMock()
+    ),
+    # Additional pipecat sub-paths used by llm_interruption_judge.py
+    "pipecat.turns.user_start": MagicMock(),
+    "pipecat.turns.user_start.base_user_turn_start_strategy": MagicMock(),
+    "pipecat.utils.asyncio": MagicMock(),
+    "pipecat.utils.asyncio.task_manager": MagicMock(),
+    "pipecat.utils.tracing.turn_context_provider": MagicMock(),
+    "pipecat.utils.tracing.conversation_context_provider": MagicMock(),
 }
 
 # deepgram — imported by app.worker.services for LiveOptions
