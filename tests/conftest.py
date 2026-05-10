@@ -58,8 +58,10 @@ def pg_container():
 
         original_url = db_module.DATABASE_URL
         original_pool = db_module._pool
+        original_sslmode = db_module.DB_SSLMODE
 
         db_module.DATABASE_URL = dsn
+        db_module.DB_SSLMODE = "disable"  # testcontainer postgres has no SSL
         db_module._pool = None  # Force pool re-creation with new URL
 
         _run_migrations(dsn)
@@ -69,6 +71,7 @@ def pg_container():
         # Restore original values (important when running multiple sessions in
         # a single process, e.g., under watch-mode).
         db_module.DATABASE_URL = original_url
+        db_module.DB_SSLMODE = original_sslmode
         db_module._pool = original_pool
 
 
