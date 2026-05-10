@@ -131,7 +131,7 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 
 
 async def _json_decode_exception_handler(request: Request, exc: Exception):
-    """Return a clean 400 for malformed JSON bodies; re-raise everything else."""
+    """Return a clean 400 for malformed JSON bodies; 500 for all other unhandled errors."""
     if isinstance(exc, _json.JSONDecodeError):
         return JSONResponse(
             status_code=400,
@@ -141,7 +141,13 @@ async def _json_decode_exception_handler(request: Request, exc: Exception):
                 "details": [{"field": "body", "message": str(exc)}],
             },
         )
-    raise exc
+    from loguru import logger as _logger
+
+    _logger.error(f"Unhandled exception: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": "Internal server error"},
+    )
 
 
 app = FastAPI(

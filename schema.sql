@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS insights_config (
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_insights_config_org ON insights_config(org_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_insights_config_org_name ON insights_config(org_id, name);
 
 -- ── assistants ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS assistants (
@@ -115,12 +116,14 @@ CREATE TABLE IF NOT EXISTS phone_numbers (
     provider                 TEXT NOT NULL DEFAULT 'twilio',
     provider_credentials     JSONB NOT NULL DEFAULT '{}',
     assistant_id             UUID REFERENCES assistants(id) ON DELETE SET NULL,
-    is_inbound_enabled       BOOLEAN NOT NULL DEFAULT TRUE,
-    is_outbound_enabled      BOOLEAN NOT NULL DEFAULT TRUE,
+    is_inbound_enabled        BOOLEAN NOT NULL DEFAULT TRUE,
+    is_outbound_enabled       BOOLEAN NOT NULL DEFAULT TRUE,
     max_call_duration_seconds INT NOT NULL DEFAULT 3600,
-    is_active                BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    max_concurrent_calls      INT,
+    max_calls_per_day         INT,
+    is_active                 BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_phone_numbers_org ON phone_numbers(org_id);
 CREATE INDEX IF NOT EXISTS idx_phone_numbers_number ON phone_numbers(phone_number);
@@ -162,12 +165,14 @@ CREATE TABLE IF NOT EXISTS calls (
     assistant_id         UUID REFERENCES assistants(id) ON DELETE SET NULL,
     status               TEXT NOT NULL DEFAULT 'initiated',
     started_at           TIMESTAMPTZ,
+    answered_at          TIMESTAMPTZ,
     ended_at             TIMESTAMPTZ,
     duration_seconds     INT,
     error_code           TEXT,
     error_message        TEXT,
     recording_url        TEXT,
     summary              TEXT,
+    transcript           JSONB NOT NULL DEFAULT '[]',
     worker_instance_id   TEXT,
     worker_host          TEXT,
     custom_params        JSONB NOT NULL DEFAULT '{}',
@@ -219,6 +224,8 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
     payload         JSONB NOT NULL DEFAULT '{}',
     status          TEXT NOT NULL DEFAULT 'pending',
     attempts        INT NOT NULL DEFAULT 0,
+    attempt_number  INT NOT NULL DEFAULT 0,
+    max_attempts    INT NOT NULL DEFAULT 5,
     last_attempt_at TIMESTAMPTZ,
     next_retry_at   TIMESTAMPTZ,
     response_code   INT,
@@ -303,7 +310,7 @@ CREATE TABLE IF NOT EXISTS insights_jobs (
     call_analysis_id        UUID REFERENCES call_analysis(id) ON DELETE CASCADE,
     org_id                  UUID REFERENCES organizations(id) ON DELETE CASCADE,
     priority                INT NOT NULL DEFAULT 100,
-    parent_call_request_id  UUID REFERENCES call_requests(id) ON DELETE SET NULL,
+    parent_call_request_id  UUID,
     status                  TEXT NOT NULL DEFAULT 'queued',
     created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()

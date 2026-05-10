@@ -201,6 +201,18 @@ def delete_config(
                 detail="Config is referenced by one or more assistants and cannot be deleted",
             )
 
+    # Block deletion if any call_analysis references this config
+    with get_cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM call_analysis WHERE insights_config_id = %s LIMIT 1",
+            (str(config_id),),
+        )
+        if cur.fetchone():
+            raise HTTPException(
+                status_code=409,
+                detail="Config is referenced by existing analyses and cannot be deleted",
+            )
+
     try:
         repo.delete(config_id)
     except psycopg2.errors.ForeignKeyViolation:

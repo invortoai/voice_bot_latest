@@ -832,7 +832,6 @@ class BaseWorkerPool(ABC):
             result.append(
                 {
                     "worker_id": w.instance_id,
-                    "host": w.host,
                     "is_available": w.consecutive_failures < 3 and not current_call_sid,
                     "current_call_sid": current_call_sid,
                     "assigned_at": assigned_at,

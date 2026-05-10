@@ -515,6 +515,19 @@ async def submit_external_request_upload(
                 status_code=422,
                 detail="insights_config_id: invalid UUID format.",
             )
+    else:
+        # Check for default config before S3 upload to return 422 early.
+        with get_cursor() as cur:
+            cur.execute(
+                "SELECT id FROM insights_config WHERE org_id = %s AND is_default = TRUE LIMIT 1",
+                (org_id,),
+            )
+            if cur.fetchone() is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="No default insights_config found for this org. "
+                    "Please set a default config or provide insights_config_id in the request body.",
+                )
     additional_data_parsed = _parse_form_additional_data(additional_data)
 
     # boto3 upload is synchronous — run in a thread pool so the event

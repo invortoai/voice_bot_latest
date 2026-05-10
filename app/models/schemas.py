@@ -358,7 +358,7 @@ class CallStatRecord(BaseModel):
         ...,
         description="Final status: answered | missed | busy | failed | rejected",
     )
-    call_direction: str = Field(..., description="outbound or inbound")
+    call_direction: Optional[str] = Field(None, description="outbound or inbound")
     call_start_time: Optional[str] = Field(
         None, description="ISO 8601 — when the call was initiated"
     )
