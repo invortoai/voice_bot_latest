@@ -90,7 +90,9 @@ def _run_migrations(dsn: str) -> None:
         # Submodule not initialised (e.g. CI without Bitbucket access).
         # Fall back to schema.sql + migrations/*.sql checked into this repo.
         fallback_schema = os.path.join(repo_root, "schema.sql")
-        fallback_migrations = sorted(glob.glob(os.path.join(repo_root, "migrations", "*.sql")))
+        fallback_migrations = sorted(
+            glob.glob(os.path.join(repo_root, "migrations", "*.sql"))
+        )
         migration_files = []
         if os.path.exists(fallback_schema):
             migration_files.append(fallback_schema)
