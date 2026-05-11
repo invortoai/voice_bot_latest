@@ -220,11 +220,22 @@ jobs:
               --region ap-south-1 \
               --query Parameter.Value \
               --output text > /home/ec2-user/worker.env
+            # Fetch Azure OpenAI secrets from individual SSM parameters
+            AZURE_OPENAI_API_KEY=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-api-key" --with-decryption --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_ENDPOINT=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-endpoint" --with-decryption --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_API_VERSION=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-api-version" --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_DEPLOYMENT_NAME=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-deployment-name" --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_LLM_JUDGE_DEPLOYMENT_NAME=$(aws ssm get-parameter --name "/invorto-ai/azure-llm-judge-deployment-name" --region ap-south-1 --query Parameter.Value --output text)
             docker rm -f invorto-worker || true
             docker run -d \
               --name invorto-worker \
               --restart unless-stopped \
               --env-file /home/ec2-user/worker.env \
+              -e AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" \
+              -e AZURE_OPENAI_ENDPOINT="$AZURE_OPENAI_ENDPOINT" \
+              -e AZURE_OPENAI_API_VERSION="$AZURE_OPENAI_API_VERSION" \
+              -e AZURE_OPENAI_DEPLOYMENT_NAME="$AZURE_OPENAI_DEPLOYMENT_NAME" \
+              -e AZURE_LLM_JUDGE_DEPLOYMENT_NAME="$AZURE_LLM_JUDGE_DEPLOYMENT_NAME" \
               -p 8765:8765 \
               957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
             echo "Worker container started:"
@@ -247,11 +258,22 @@ jobs:
               --region ap-south-1 \
               --query Parameter.Value \
               --output text > /home/ec2-user/worker.env
+            # Fetch Azure OpenAI secrets from individual SSM parameters
+            AZURE_OPENAI_API_KEY=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-api-key" --with-decryption --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_ENDPOINT=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-endpoint" --with-decryption --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_API_VERSION=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-api-version" --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_OPENAI_DEPLOYMENT_NAME=$(aws ssm get-parameter --name "/invorto-ai/azure-openai-deployment-name" --region ap-south-1 --query Parameter.Value --output text)
+            AZURE_LLM_JUDGE_DEPLOYMENT_NAME=$(aws ssm get-parameter --name "/invorto-ai/azure-llm-judge-deployment-name" --region ap-south-1 --query Parameter.Value --output text)
             docker rm -f invorto-worker || true
             docker run -d \
               --name invorto-worker \
               --restart unless-stopped \
               --env-file /home/ec2-user/worker.env \
+              -e AZURE_OPENAI_API_KEY="$AZURE_OPENAI_API_KEY" \
+              -e AZURE_OPENAI_ENDPOINT="$AZURE_OPENAI_ENDPOINT" \
+              -e AZURE_OPENAI_API_VERSION="$AZURE_OPENAI_API_VERSION" \
+              -e AZURE_OPENAI_DEPLOYMENT_NAME="$AZURE_OPENAI_DEPLOYMENT_NAME" \
+              -e AZURE_LLM_JUDGE_DEPLOYMENT_NAME="$AZURE_LLM_JUDGE_DEPLOYMENT_NAME" \
               -p 8765:8765 \
               957500070832.dkr.ecr.ap-south-1.amazonaws.com/invorto-ai-worker:latest
             echo "Worker container started:"
