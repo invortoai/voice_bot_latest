@@ -33,7 +33,9 @@ class AssistantCreate(BaseModel):
     insights_config_id: Optional[UUID] = None
     silence_response_enabled: bool = False
     silence_timeout_seconds: int = Field(default=5, ge=1, le=300)
-    silence_response_type: str = Field(default="static", pattern="^(static|ai_generated)$")
+    silence_response_type: str = Field(
+        default="static", pattern="^(static|ai_generated)$"
+    )
     silence_response_message: Optional[str] = None
     bot_speaks_first: bool = True
 
@@ -62,7 +64,9 @@ class AssistantUpdate(BaseModel):
     insights_config_id: Optional[UUID] = None
     silence_response_enabled: Optional[bool] = None
     silence_timeout_seconds: Optional[int] = Field(default=None, ge=1, le=300)
-    silence_response_type: Optional[str] = Field(default=None, pattern="^(static|ai_generated)$")
+    silence_response_type: Optional[str] = Field(
+        default=None, pattern="^(static|ai_generated)$"
+    )
     silence_response_message: Optional[str] = None
     bot_speaks_first: Optional[bool] = None
 

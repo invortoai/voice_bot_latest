@@ -37,7 +37,11 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.turns.user_stop import TurnAnalyzerUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
-from app.config import OPENAI_API_KEY, SILENCE_NUDGE_AI_PROMPT, SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE
+from app.config import (
+    OPENAI_API_KEY,
+    SILENCE_NUDGE_AI_PROMPT,
+    SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE,
+)
 from app.worker.config import AssistantConfig, SYSTEM_PARAM_KEYS
 from app.worker.strategies.llm_interruption_judge import LLMInterruptionJudgeStrategy
 from app.worker.metrics import CallMetrics
@@ -69,10 +73,10 @@ class SilenceNudgeObserver(BaseObserver):
         self._config = config
         self._call_sid = call_sid
         self._provider_name = provider_name
-        self._task_ref = None          # set after PipelineTask is created
+        self._task_ref = None  # set after PipelineTask is created
         self._timer: Optional[asyncio.Task] = None
         self._bot_speaking = False
-        self._active = False           # armed after task is set
+        self._active = False  # armed after task is set
 
     def set_pipeline_task(self, task) -> None:
         """Called after PipelineTask is created to wire up the queue_frames ref."""
@@ -136,7 +140,11 @@ class SilenceNudgeObserver(BaseObserver):
                     return
                 content = SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE.format(message=msg)
             await self._task_ref.queue_frames(
-                [LLMMessagesAppendFrame(messages=[{"role": "user", "content": content}], run_llm=True)]
+                [
+                    LLMMessagesAppendFrame(
+                        messages=[{"role": "user", "content": content}], run_llm=True
+                    )
+                ]
             )
         except asyncio.CancelledError:
             pass
