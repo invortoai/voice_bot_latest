@@ -32,6 +32,11 @@ def create(
     rag_top_k: int = 5,
     rag_score_threshold: float = 0.35,
     rag_context_query: Optional[str] = None,
+    silence_response_enabled: bool = False,
+    silence_timeout_seconds: int = 5,
+    silence_response_type: str = "static",
+    silence_response_message: Optional[str] = None,
+    bot_speaks_first: bool = True,
 ) -> dict:
     with get_cursor() as cur:
         cur.execute(
@@ -41,8 +46,10 @@ def create(
                 voice_provider, voice_id, voice_model, voice_settings, greeting_message, end_call_phrases,
                 transcriber_provider, transcriber_model, transcriber_language, transcriber_settings,
                 vad_settings, interruption_strategy, insight_enabled, insights_config_id,
-                knowledge_base_id, rag_top_k, rag_score_threshold, rag_context_query
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                knowledge_base_id, rag_top_k, rag_score_threshold, rag_context_query,
+                silence_response_enabled, silence_timeout_seconds, silence_response_type,
+                silence_response_message, bot_speaks_first
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING *
         """,
             (
@@ -71,6 +78,11 @@ def create(
                 rag_top_k,
                 rag_score_threshold,
                 rag_context_query,
+                silence_response_enabled,
+                silence_timeout_seconds,
+                silence_response_type,
+                silence_response_message,
+                bot_speaks_first,
             ),
         )
         return dict(cur.fetchone())
