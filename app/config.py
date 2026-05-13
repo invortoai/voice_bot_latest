@@ -216,6 +216,20 @@ LLM_JUDGE_SYSTEM_PROMPT = os.getenv(
     "Reply with exactly one word: BACKCHANNEL or INTERRUPT",
 )
 
+# ── Silence Nudge Prompts ────────────────────────────────────────────────────
+# Developer-role prompts injected when the user is silent past the
+# assistant's silence_timeout_seconds.
+# ai_generated: LLM composes a fresh nudge.
+# static: LLM repeats silence_response_message verbatim.
+SILENCE_NUDGE_AI_PROMPT = os.getenv(
+    "SILENCE_NUDGE_AI_PROMPT",
+    "The user has been quiet. Politely and briefly ask if they're still there.",
+)
+SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE = os.getenv(
+    "SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE",
+    'The user is silent. Say exactly this and nothing else: "{message}"',
+)
+
 # ── OpenTelemetry ─────────────────────────────────────────────────────────────
 # Leave OTLP_ENDPOINT unset to disable OTEL export (local dev default).
 # For Coralogix AP1 (direct export, no collector):

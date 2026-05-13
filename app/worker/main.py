@@ -384,7 +384,7 @@ async def _fill_prewarm(
         vad_params = VADParams(
             confidence=vad_cfg.get("confidence", 0.7),
             start_secs=vad_cfg.get("start_secs", 0.2),
-            stop_secs=vad_cfg.get("stop_secs", 0.8),
+            stop_secs=vad_cfg.get("stop_secs", 0.2),
             min_volume=vad_cfg.get("min_volume", 0.6),
         )
         entry.vad_analyzer = SileroVADAnalyzer(params=vad_params)
@@ -554,7 +554,12 @@ async def _handle_call(
         call_sid = provider.extract_call_sid(call_info, path_call_sid)
         set_log_context(call_sid=call_sid, provider=provider.name.lower())
         _set_span_attrs(
-            **{"call_sid": call_sid, "telephony.provider": provider.name.lower()}
+            **{
+                "call_sid": call_sid,
+                "telephony.provider": provider.name.lower(),
+                "langfuse.trace.name": call_sid,
+                "langfuse.session.id": call_sid,
+            }
         )
         logger.info(f"[{provider.name}] call_sid={call_sid}: WebSocket call started")
 
@@ -913,6 +918,20 @@ async def prewarm_call(body: _PrewarmRequest, _: None = Depends(verify_worker_au
     entry = PrewarmEntry(call_sid=call_sid)
     entry.task = asyncio.create_task(_fill_prewarm(call_sid, entry, config_payload))
     await prewarm_cache.put(entry)
+
+    # Seed worker_state so the runner's health-check sees this worker as busy
+    # during the prewarm window (before the WebSocket arrives and calls start_call).
+    # CAS: only write if the worker is currently idle (None).
+    async with worker_state._lock:
+        if worker_state.current_call_sid is None:
+            worker_state.current_call_sid = call_sid
+            logger.debug(f"[prewarm] worker_state seeded with {call_sid}")
+        else:
+            logger.warning(
+                f"[prewarm] worker_state already has {worker_state.current_call_sid!r}, "
+                f"skipping seed for {call_sid}"
+            )
+
     logger.info(
         f"[prewarm] call_sid={call_sid}: started "
         f"(config_from_payload={config_payload is not None}, wait={body.wait})"
@@ -976,6 +995,13 @@ async def cancel_prewarm(call_sid: str, _: None = Depends(verify_worker_auth)):
     entry = await prewarm_cache.remove(call_sid)
     if not entry:
         return {"status": "not_found"}
+
+    # Clear the seeded call_sid so the worker appears idle again.
+    # CAS: only clear if it still holds this call_sid (WS may have already advanced it).
+    async with worker_state._lock:
+        if worker_state.current_call_sid == call_sid:
+            worker_state.current_call_sid = None
+            logger.debug(f"[prewarm] worker_state cleared after cancel for {call_sid}")
 
     entry.is_cancelled = True
     if entry.task and not entry.task.done():

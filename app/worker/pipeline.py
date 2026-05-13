@@ -16,10 +16,15 @@ from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnal
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import (
+    BotStartedSpeakingFrame,
+    BotStoppedSpeakingFrame,
     EndFrame,
+    LLMMessagesAppendFrame,
     OutputAudioRawFrame,
     TTSSpeakFrame,
+    UserStartedSpeakingFrame,
 )
+from pipecat.observers.base_observer import BaseObserver, FramePushed
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.task import PipelineParams, PipelineTask
 from pipecat.services.openai.base_llm import BaseOpenAILLMService
@@ -32,7 +37,7 @@ from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.turns.user_stop import TurnAnalyzerUserTurnStopStrategy
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
-from app.config import OPENAI_API_KEY
+from app.config import OPENAI_API_KEY, SILENCE_NUDGE_AI_PROMPT, SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE
 from app.worker.config import AssistantConfig, SYSTEM_PARAM_KEYS
 from app.worker.strategies.llm_interruption_judge import LLMInterruptionJudgeStrategy
 from app.worker.metrics import CallMetrics
@@ -43,6 +48,102 @@ from app.worker.providers.base import WorkerProvider
 from app.worker.services import create_stt_service, create_tts_service
 
 MAX_AUDIO_FETCH_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+# =============================================================================
+# Silence Nudge Observer
+# =============================================================================
+
+
+class SilenceNudgeObserver(BaseObserver):
+    """Fires a silence nudge when the user is quiet past silence_timeout_seconds.
+
+    Uses frame observation to track user and bot speech state, then runs an
+    asyncio timer. Resets on every UserStartedSpeakingFrame. Pauses while the
+    bot is speaking (BotStartedSpeakingFrame) and restarts when the bot
+    finishes (BotStoppedSpeakingFrame). Works with pipecat 0.0.99+.
+    """
+
+    def __init__(self, config, call_sid: str, provider_name: str):
+        super().__init__()
+        self._config = config
+        self._call_sid = call_sid
+        self._provider_name = provider_name
+        self._task_ref = None          # set after PipelineTask is created
+        self._timer: Optional[asyncio.Task] = None
+        self._bot_speaking = False
+        self._active = False           # armed after task is set
+
+    def set_pipeline_task(self, task) -> None:
+        """Called after PipelineTask is created to wire up the queue_frames ref."""
+        self._task_ref = task
+        self._active = True
+        # Start the initial timer immediately so the nudge fires even if the
+        # user never produces any VAD events (pure silence from call start).
+        self._start_timer()
+
+    async def on_push_frame(self, data: FramePushed) -> None:
+        frame = data.frame
+        if isinstance(frame, UserStartedSpeakingFrame):
+            # User is speaking — reset the silence timer.
+            self._reset_timer()
+        elif isinstance(frame, BotStartedSpeakingFrame):
+            # Bot is speaking — pause the timer so we don't nudge over the bot.
+            self._bot_speaking = True
+            self._cancel_timer()
+        elif isinstance(frame, BotStoppedSpeakingFrame):
+            # Bot finished — restart the silence window.
+            self._bot_speaking = False
+            self._start_timer()
+        elif isinstance(frame, EndFrame):
+            # Call ending — stop everything.
+            self._active = False
+            self._cancel_timer()
+
+    def _cancel_timer(self) -> None:
+        if self._timer and not self._timer.done():
+            self._timer.cancel()
+        self._timer = None
+
+    def _reset_timer(self) -> None:
+        self._cancel_timer()
+        if not self._bot_speaking:
+            self._start_timer()
+
+    def _start_timer(self) -> None:
+        self._cancel_timer()
+        if self._active and self._task_ref is not None:
+            self._timer = asyncio.create_task(self._run_timer())
+
+    async def _run_timer(self) -> None:
+        try:
+            await asyncio.sleep(self._config.silence_timeout_seconds)
+            if not self._active or self._bot_speaking or self._task_ref is None:
+                return
+            logger.info(
+                f"[{self._provider_name}] call_sid={self._call_sid}: silence nudge "
+                f"firing (type={self._config.silence_response_type})"
+            )
+            if self._config.silence_response_type == "ai_generated":
+                content = SILENCE_NUDGE_AI_PROMPT
+            else:
+                msg = self._config.silence_response_message
+                if not msg:
+                    logger.warning(
+                        f"[{self._provider_name}] call_sid={self._call_sid}: static silence "
+                        f"nudge enabled but silence_response_message is empty — skipping"
+                    )
+                    return
+                content = SILENCE_NUDGE_STATIC_PROMPT_TEMPLATE.format(message=msg)
+            await self._task_ref.queue_frames(
+                [LLMMessagesAppendFrame(messages=[{"role": "user", "content": content}], run_llm=True)]
+            )
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(
+                f"[{self._provider_name}] call_sid={self._call_sid}: silence nudge error: {e}"
+            )
 
 
 # =============================================================================
@@ -376,7 +477,7 @@ async def create_pipeline(
         vad_params = VADParams(
             confidence=vad_cfg.get("confidence", 0.7),
             start_secs=vad_cfg.get("start_secs", 0.2),
-            stop_secs=vad_cfg.get("stop_secs", 0.8),
+            stop_secs=vad_cfg.get("stop_secs", 0.2),
             min_volume=vad_cfg.get("min_volume", 0.6),
         )
         smart_turn_params = SmartTurnParams(
@@ -501,6 +602,16 @@ async def create_pipeline(
 
     pipeline = Pipeline(pipeline_stages)
 
+    # Build silence nudge observer before creating the task so it can be passed
+    # as an observer. The pipeline task ref is wired in after task creation.
+    silence_observer: Optional[SilenceNudgeObserver] = None
+    if config.silence_response_enabled:
+        silence_observer = SilenceNudgeObserver(
+            config=config,
+            call_sid=call_sid,
+            provider_name=provider.name,
+        )
+
     assistant_name = (assistant_config or {}).get("name", "")
     task = PipelineTask(
         pipeline,
@@ -511,6 +622,7 @@ async def create_pipeline(
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
+        observers=[silence_observer] if silence_observer else None,
         enable_tracing=is_pipecat_tracing_enabled(),
         enable_turn_tracking=is_pipecat_tracing_enabled(),
         conversation_id=call_sid,
@@ -525,6 +637,10 @@ async def create_pipeline(
     )
 
     end_call_processor.set_task(task)
+
+    # Wire the pipeline task into the silence observer now that it exists.
+    if silence_observer:
+        silence_observer.set_pipeline_task(task)
 
     pipeline_ready_at = time.monotonic()
     if metrics is not None:
@@ -546,6 +662,13 @@ async def create_pipeline(
         if metrics is not None:
             metrics.record_client_connected()
         logger.info(f"[{provider.name}] call_sid={call_sid}: client connected")
+
+        if not config.bot_speaks_first:
+            logger.info(
+                f"[{provider.name}] call_sid={call_sid}: bot_speaks_first=False — skipping greeting, waiting for user"
+            )
+            return
+
         greeting = config.get_greeting()
         if not greeting:
             logger.info(

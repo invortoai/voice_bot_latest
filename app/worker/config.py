@@ -152,6 +152,27 @@ class AssistantConfig:
             (config.get("interruption_strategy") or "default").strip().lower()
         )
 
+        # ── Silence nudge ──────────────────────────────────────────────────
+        sre = config.get("silence_response_enabled")
+        self.silence_response_enabled = False if sre is None else bool(sre)
+
+        sts = config.get("silence_timeout_seconds")
+        try:
+            self.silence_timeout_seconds = int(sts) if sts is not None else 5
+        except (TypeError, ValueError):
+            self.silence_timeout_seconds = 5
+
+        srt = config.get("silence_response_type")
+        self.silence_response_type = (
+            srt if srt in ("static", "ai_generated") else "static"
+        )
+
+        self.silence_response_message = config.get("silence_response_message") or ""
+
+        # ── Bot speaks first ───────────────────────────────────────────────
+        bsf = config.get("bot_speaks_first")
+        self.bot_speaks_first = True if bsf is None else bool(bsf)
+
     def _load_from_phone_config(self, config: dict):
         # Extract Twilio credentials from provider_credentials JSONB column
         provider_credentials = config.get("provider_credentials", {})

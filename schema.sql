@@ -99,11 +99,16 @@ CREATE TABLE IF NOT EXISTS assistants (
     transcriber_settings  JSONB,
     vad_settings          JSONB,
     interruption_strategy TEXT,
-    insight_enabled       BOOLEAN NOT NULL DEFAULT FALSE,
-    insights_config_id    UUID REFERENCES insights_config(id) ON DELETE SET NULL,
-    is_active             BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    insight_enabled           BOOLEAN NOT NULL DEFAULT FALSE,
+    insights_config_id        UUID REFERENCES insights_config(id) ON DELETE SET NULL,
+    silence_response_enabled  BOOLEAN NOT NULL DEFAULT FALSE,
+    silence_timeout_seconds   INT     NOT NULL DEFAULT 5,
+    silence_response_type     TEXT    NOT NULL DEFAULT 'static',
+    silence_response_message  TEXT,
+    bot_speaks_first          BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active                 BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_assistants_org ON assistants(org_id);
 
