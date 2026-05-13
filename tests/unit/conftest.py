@@ -78,9 +78,29 @@ class _TTSUsageMetricsData:
         self.value = value
 
 
+class _LLMMessagesAppendFrame:
+    def __init__(self, messages=None, run_llm=False):
+        self.messages = messages or []
+        self.run_llm = run_llm
+
+
 class _FrameDirection:
     DOWNSTREAM = "downstream"
     UPSTREAM = "upstream"
+
+
+class _FramePushed:
+    def __init__(self, frame=None, source=None, direction=None):
+        self.frame = frame
+        self.source = source
+        self.direction = direction
+
+
+class _BaseObserver:
+    """Minimal stub mirroring pipecat's BaseObserver interface."""
+
+    async def on_push_frame(self, data) -> None:
+        pass
 
 
 class _FrameProcessor:
@@ -117,6 +137,7 @@ _frames_mod = _make_mod(
     TextFrame=_TextFrame,
     EndFrame=_EndFrame,
     LLMFullResponseEndFrame=_LLMFullResponseEndFrame,
+    LLMMessagesAppendFrame=_LLMMessagesAppendFrame,
     TTSSpeakFrame=_TTSSpeakFrame,
     OutputAudioRawFrame=_OutputAudioRawFrame,
     UserStartedSpeakingFrame=_UserStartedSpeakingFrame,
@@ -124,6 +145,11 @@ _frames_mod = _make_mod(
     BotStartedSpeakingFrame=_BotStartedSpeakingFrame,
     BotStoppedSpeakingFrame=_BotStoppedSpeakingFrame,
     MetricsFrame=_MetricsFrame,
+)
+
+_observers_mod = _make_mod(
+    BaseObserver=_BaseObserver,
+    FramePushed=_FramePushed,
 )
 
 _metrics_mod = _make_mod(
@@ -174,6 +200,8 @@ _PIPECAT_STUBS: dict = {
     "pipecat.utils.tracing.setup": MagicMock(),
     "pipecat.metrics": MagicMock(),
     "pipecat.metrics.metrics": _metrics_mod,
+    "pipecat.observers": MagicMock(),
+    "pipecat.observers.base_observer": _observers_mod,
     # worker sub-packages — must be registered so app.worker.main is importable
     # in unit tests without the full worker install.
     # NOTE: app.worker.processors.* are real modules on disk — do NOT stub them.
